@@ -136,7 +136,7 @@ impl Strings {
             return known;
         }
 
-        // We cache this to avoid repeating DFA subproblems.
+        // Cache exact-distance reachability; avoid repeated DFA subproblems.
         // `onward` may grow the DFA, so copy its transitions before recursing.
         let onward = self.dfa.onward(state).to_vec();
         let mut outlook = Outlook::Nothing;

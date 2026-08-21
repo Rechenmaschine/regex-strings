@@ -79,7 +79,7 @@ impl Dfa {
 
     pub(crate) fn onward(&mut self, id: u32) -> &[(char, u32)] {
         if self.states[id as usize].onward.is_none() {
-            // We copy this because expansion can mutate `states`.
+            // Copy row; expansion can mutate `states`.
             let set = self.states[id as usize].set.clone();
             let prev = self.states[id as usize].prev;
 
@@ -139,7 +139,7 @@ impl Nfa {
         }
 
         nfa.alive_anywhere = nfa.co_accessible(|_| true);
-        // We need a separate mask because `^` is invalid after the first character.
+        // Separate mask; `^` is invalid after the first character.
         nfa.alive_later = nfa.co_accessible(|look| match look {
             Look::Start => false,
             Look::StartLF => alphabet.contains(&'\n'),
