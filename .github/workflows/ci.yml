@@ -36,9 +36,13 @@ jobs:
         with:
           toolchain: nightly
 
-      - run: cargo install cargo-fuzz --version 0.12.0 --locked
+      - run: cargo install cargo-fuzz
+        env:
+          RUSTFLAGS: ""
 
       - run: cargo fuzz run enumeration_matches_regex -- -max_total_time=60
+        env:
+          RUSTFLAGS: ""
 
       - if: failure()
         uses: actions/upload-artifact@v4
