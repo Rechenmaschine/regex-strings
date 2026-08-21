@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f1ea" />
+    <meta name="description" content="Generate strings matched by a regular expression using regex-strings in WebAssembly." />
+    <title>Regex match generator</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div>
+          <h1>Regex match generator</h1>
+          <p class="lede">Regular expressions define languages over alphabets. This tool enumerates the strings described by a regex. For infinite languages, use a word limit or maximum word length to bound the output.</p>
+        </div>
+      </header>
+
+      <section class="workspace" aria-label="Regex string generator">
+        <form id="generator-form" class="controls">
+          <div class="field field-wide">
+            <label for="pattern">Regular expression</label>
+            <textarea id="pattern" name="pattern" rows="2" spellcheck="false" wrap="soft">^a(b|c)*d$</textarea>
+            <p class="hint">Use Rust's <code>regex</code> syntax. Add <code>^</code> and <code>$</code> to enumerate the whole match.</p>
+          </div>
+
+          <div class="field field-wide">
+            <div class="label-row">
+              <label for="alphabet">Alphabet</label>
+              <div class="presets" aria-label="Alphabet presets">
+                <button type="button" class="preset" data-alphabet="abcdefghijklmnopqrstuvwxyz">a–z</button>
+                <button type="button" class="preset" data-alphabet="0123456789">digits</button>
+                <button type="button" class="preset" data-alphabet="abcdefghijklmnopqrstuvwxyz0123456789-_">slug</button>
+              </div>
+            </div>
+            <textarea id="alphabet" name="alphabet" rows="2" spellcheck="false">abcd</textarea>
+            <p class="hint">The alphabet is used to build candidate strings; the regex filters them. For example, <code>abc</code> means generated output can only contain a, b, and c.</p>
+          </div>
+
+          <div class="field">
+            <label for="word-limit">Word limit</label>
+            <input id="word-limit" name="word-limit" type="number" min="1" step="1" value="100" inputmode="numeric" />
+            <label class="check-label"><input id="unlimited" type="checkbox" /> no limit</label>
+          </div>
+
+          <div class="field">
+            <label for="max-length">Max word length <span class="optional">optional</span></label>
+            <input id="max-length" name="max-length" type="number" min="0" step="1" placeholder="none" inputmode="numeric" />
+            <p class="hint">Required for unlimited searches over infinite languages.</p>
+          </div>
+
+          <div class="actions field-wide">
+            <button id="generate" class="primary" type="submit" disabled>Generate matches <span>↵</span></button>
+            <button id="clear" class="secondary" type="button">Clear output</button>
+            <p id="status" class="status" role="status">Loading WebAssembly…</p>
+          </div>
+        </form>
+
+        <section class="results" aria-labelledby="results-heading">
+          <div class="results-head">
+            <div>
+              <p class="eyebrow">output</p>
+              <h2 id="results-heading">Matches</h2>
+            </div>
+            <div class="result-actions">
+              <span id="count" class="count">0 words</span>
+              <button id="copy" class="text-button" type="button" disabled>Copy</button>
+              <button id="download" class="text-button" type="button" disabled>Download</button>
+            </div>
+          </div>
+          <pre id="output" class="output" tabindex="0" aria-label="Generated matching strings"><span class="placeholder">Your matches will appear here.</span></pre>
+        </section>
+      </section>
+
+      <footer>
+        <span>Powered by regex-strings + WebAssembly.</span>
+        <span>Runs entirely on your device.</span>
+      </footer>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
