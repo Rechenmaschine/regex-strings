@@ -1,8 +1,8 @@
 [package]
-name = "regex-strings-fuzz"
-version = "0.0.0"
-publish = false
 edition = "2024"
+name = "regex-strings-fuzz"
+publish = false
+version = "0.0.0"
 
 [package.metadata]
 cargo-fuzz = true
@@ -15,8 +15,8 @@ regex = "1.13.1"
 path = ".."
 
 [[bin]]
+bench = false
+doc = false
 name = "enumeration_matches_regex"
 path = "fuzz_targets/enumeration_matches_regex.rs"
 test = false
-doc = false
-bench = false
