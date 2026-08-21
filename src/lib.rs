@@ -23,6 +23,55 @@ use std::collections::hash_map::Entry;
 use regex::Regex;
 use regex_syntax::hir::{Class, Hir, HirKind, Look};
 
+/// The finite set of characters a [`RegexExt::strings`] iterator may emit.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Alphabet(Vec<char>);
+
+impl Alphabet {
+    /// Builds an alphabet, sorting and deduplicating its characters.
+    pub fn new(chars: impl IntoIterator<Item = char>) -> Self {
+        let mut chars: Vec<char> = chars.into_iter().collect();
+        chars.sort_unstable();
+        chars.dedup();
+        Self(chars)
+    }
+
+    /// Returns the alphabet's characters in enumeration order.
+    pub fn as_slice(&self) -> &[char] {
+        &self.0
+    }
+}
+
+impl From<&str> for Alphabet {
+    fn from(value: &str) -> Self {
+        Self::new(value.chars())
+    }
+}
+
+impl From<String> for Alphabet {
+    fn from(value: String) -> Self {
+        Self::from(value.as_str())
+    }
+}
+
+impl From<&String> for Alphabet {
+    fn from(value: &String) -> Self {
+        Self::from(value.as_str())
+    }
+}
+
+impl From<Vec<char>> for Alphabet {
+    fn from(value: Vec<char>) -> Self {
+        Self::new(value)
+    }
+}
+
+impl FromIterator<char> for Alphabet {
+    fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
+        Self::new(iter)
+    }
+}
+
 /// Enumeration for [`Regex`].
 pub trait RegexExt {
     /// Iterates the strings over `alphabet` that this regex matches, in
@@ -43,19 +92,18 @@ pub trait RegexExt {
     /// let found: Vec<String> = re.strings("0123-").take(3).collect();
     /// assert_eq!(found, ["000-00", "000-01", "000-02"]);
     /// ```
-    fn strings(&self, alphabet: &str) -> Strings;
+    fn strings(&self, alphabet: impl Into<Alphabet>) -> Strings;
 }
 
 impl RegexExt for Regex {
-    fn strings(&self, alphabet: &str) -> Strings {
+    fn strings(&self, alphabet: impl Into<Alphabet>) -> Strings {
         let hir =
             regex_syntax::parse(self.as_str()).expect("a compiled Regex has a parseable pattern");
 
-        let mut alphabet: Vec<char> = alphabet.chars().collect();
-        alphabet.sort_unstable();
-        alphabet.dedup();
+        let alphabet = alphabet.into();
+        let chars = alphabet.0;
 
-        let mut dfa = Dfa::new(Nfa::build(&hir, &alphabet), alphabet);
+        let mut dfa = Dfa::new(Nfa::build(&hir, &chars), chars);
         let start = dfa.intern(vec![dfa.nfa.start], None);
         Strings {
             dfa,
@@ -600,8 +648,18 @@ fn class_contains(class: &Class, ch: char) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::Alphabet;
     use super::RegexExt;
     use regex::Regex;
+
+    #[test]
+    fn alphabet_is_canonical() {
+        let alphabet = Alphabet::from("cbac");
+        assert_eq!(alphabet.as_slice(), &['a', 'b', 'c']);
+
+        let alphabet: Alphabet = ['z', 'x', 'z'].into_iter().collect();
+        assert_eq!(alphabet.as_slice(), &['x', 'z']);
+    }
 
     fn take(pattern: &str, alphabet: &str, n: usize) -> Vec<String> {
         Regex::new(pattern)
