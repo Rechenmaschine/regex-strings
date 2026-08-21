@@ -19,8 +19,8 @@ struct DfaState {
     set: Vec<u32>,
     prev: Option<char>,
     accepting: bool,
-    /// Outgoing transitions as `(alphabet index, state)`, filled lazily.
-    onward: Option<Vec<(u32, u32)>>,
+    /// Outgoing transitions as `(character, state)`, filled lazily.
+    onward: Option<Vec<(char, u32)>>,
 }
 
 impl Dfa {
@@ -71,10 +71,6 @@ impl Dfa {
         self.states[id as usize].accepting
     }
 
-    pub(crate) fn alphabet_char(&self, index: u32) -> char {
-        self.alphabet[index as usize]
-    }
-
     pub(crate) fn state_count(&self) -> usize {
         self.states.len()
     }
@@ -83,7 +79,7 @@ impl Dfa {
         self.nfa.start
     }
 
-    pub(crate) fn onward(&mut self, id: u32) -> &[(u32, u32)] {
+    pub(crate) fn onward(&mut self, id: u32) -> &[(char, u32)] {
         if self.states[id as usize].onward.is_none() {
             let set = self.states[id as usize].set.clone();
             let prev = self.states[id as usize].prev;
@@ -93,7 +89,7 @@ impl Dfa {
                 let ch = self.alphabet[i];
                 let reached = self.nfa.step(&self.nfa.closure(&set, prev, Some(ch)), ch);
                 if let Some(target) = self.intern(reached, Some(ch)) {
-                    onward.push((i as u32, target));
+                    onward.push((ch, target));
                 }
             }
             self.states[id as usize].onward = Some(onward);
@@ -217,38 +213,46 @@ impl Nfa {
                 }
             }
 
-            HirKind::Repetition(rep) => {
-                let mut from = start;
-                let mut last = None;
-                for _ in 0..rep.min {
-                    let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
-                    self.eps(from, sub_start);
-                    last = Some(sub_start);
-                    from = sub_accept;
-                }
-                match (rep.max, last) {
-                    // Reuse the last mandatory copy for `x{n,}` to avoid
-                    // expanding nested quantifiers.
-                    (None, Some(sub_start)) => self.eps(from, sub_start),
-                    (None, None) => {
-                        let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
-                        self.eps(from, sub_start);
-                        self.eps(sub_accept, sub_start);
-                        self.eps(sub_accept, accept);
-                    }
-                    (Some(max), _) => {
-                        for _ in rep.min..max {
-                            self.eps(from, accept);
-                            let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
-                            self.eps(from, sub_start);
-                            from = sub_accept;
-                        }
-                    }
-                }
-                self.eps(from, accept);
-            }
+            HirKind::Repetition(rep) => self.compile_repetition(rep, start, accept, alphabet),
         }
         (start, accept)
+    }
+
+    fn compile_repetition(
+        &mut self,
+        rep: &regex_syntax::hir::Repetition,
+        start: u32,
+        accept: u32,
+        alphabet: &[char],
+    ) {
+        let mut from = start;
+        let mut last = None;
+        for _ in 0..rep.min {
+            let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
+            self.eps(from, sub_start);
+            last = Some(sub_start);
+            from = sub_accept;
+        }
+        match (rep.max, last) {
+            // Reuse the last mandatory copy for `x{n,}` to avoid expanding
+            // nested quantifiers.
+            (None, Some(sub_start)) => self.eps(from, sub_start),
+            (None, None) => {
+                let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
+                self.eps(from, sub_start);
+                self.eps(sub_accept, sub_start);
+                self.eps(sub_accept, accept);
+            }
+            (Some(max), _) => {
+                for _ in rep.min..max {
+                    self.eps(from, accept);
+                    let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
+                    self.eps(from, sub_start);
+                    from = sub_accept;
+                }
+            }
+        }
+        self.eps(from, accept);
     }
 
     /// Backwards reachability, conservatively accounting for guarded edges.

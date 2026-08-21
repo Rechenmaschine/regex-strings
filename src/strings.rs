@@ -184,14 +184,14 @@ impl Iterator for Strings {
                 return Some(word);
             }
 
-            let Some((i, target)) = self.dfa.onward(state).get(next).copied() else {
+            let Some((ch, target)) = self.dfa.onward(state).get(next).copied() else {
                 self.back_out();
                 continue;
             };
             self.path[depth].next += 1;
 
             if self.probe(target, self.target - depth - 1) == Outlook::Matches {
-                self.word.push(self.dfa.alphabet_char(i));
+                self.word.push(ch);
                 self.path.push(Step {
                     state: target,
                     next: 0,
