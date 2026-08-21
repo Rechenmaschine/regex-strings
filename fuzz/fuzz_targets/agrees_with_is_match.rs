@@ -5,10 +5,13 @@ use libfuzzer_sys::fuzz_target;
 use regex::RegexBuilder;
 use regex_strings::RegexExt;
 
-const ALPHABET: &str = "ab-\n";
-const MAX_LEN: usize = 4;
+const ALPHABETS: &[&str] = &["", "a", "ba", "ab-\n", "éaé", "\r\n", "b-a\nb"];
+const MAX_LEN: usize = 6;
 
 fuzz_target!(|data: &[u8]| {
+    let alphabet = ALPHABETS[data.first().copied().unwrap_or_default() as usize % ALPHABETS.len()];
+    let max_len = data.get(1).copied().unwrap_or_default() as usize % (MAX_LEN + 1);
+
     let Ok(pattern) = std::str::from_utf8(data) else {
         return;
     };
@@ -16,9 +19,9 @@ fuzz_target!(|data: &[u8]| {
         return;
     };
 
-    let found: Vec<String> = re.strings(ALPHABET).max_len(MAX_LEN).collect();
+    let found: Vec<String> = re.strings(alphabet).max_len(max_len).collect();
 
-    let expected: Vec<String> = words(MAX_LEN)
+    let expected: Vec<String> = words(alphabet, max_len)
         .into_iter()
         .filter(|s| re.is_match(s))
         .collect();
@@ -26,9 +29,10 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(found, expected, "pattern {pattern:?}");
 });
 
-fn words(max_len: usize) -> Vec<String> {
-    let mut chars: Vec<char> = ALPHABET.chars().collect();
+fn words(alphabet: &str, max_len: usize) -> Vec<String> {
+    let mut chars: Vec<char> = alphabet.chars().collect();
     chars.sort_unstable();
+    chars.dedup();
 
     let mut all = vec![String::new()];
     let mut level = vec![String::new()];
