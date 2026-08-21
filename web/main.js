@@ -83,7 +83,7 @@ form.addEventListener("submit", (event) => {
       const truncated = setOutput(result);
       setStatus(truncated
         ? `Showing ${result.count.toLocaleString()} matches; output truncated for browser safety.`
-        : "Done. Results stay in this browser.");
+        : "Done.");
     } catch (error) {
       setOutput({ text: "", count: 0, truncated: false });
       setStatus(error instanceof Error ? error.message : String(error), true);
