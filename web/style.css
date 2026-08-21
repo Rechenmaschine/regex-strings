@@ -15,12 +15,12 @@
 body { margin: 0; min-width: 320px; background: var(--paper); color: var(--ink); }
 .shell { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 52px 0 28px; }
 .masthead { position: relative; padding-bottom: 42px; }
-.masthead > div { padding-right: 140px; }
+.masthead > div { padding-right: 0; }
 .eyebrow { margin: 0 0 10px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 h1, h2 { margin: 0; font-family: inherit; letter-spacing: -.04em; }
-h1 { max-width: none; font-size: clamp(20px, 2.2vw, 24px); line-height: 1.2; font-weight: 700; white-space: nowrap; }
+h1 { max-width: none; font-size: clamp(26px, 3vw, 34px); line-height: 1; font-weight: 700; white-space: normal; }
 h2 { font-size: 22px; }
-.lede { max-width: none; margin: 22px 0 0; color: var(--muted); font: 16px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
+.lede { margin: 16px 0 0; color: var(--muted); font: 14px/1.65 Inter, ui-sans-serif, system-ui, sans-serif; text-align: justify; text-justify: inter-word; }
 .repo-link { position: absolute; top: 4px; right: 0; color: var(--ink); border-bottom: 1px solid var(--ink); font-size: 12px; text-decoration: none; white-space: nowrap; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); border: 1px solid var(--line); background: var(--panel); }
 .controls, .results { padding: 30px; }
