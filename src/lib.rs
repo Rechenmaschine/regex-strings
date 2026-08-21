@@ -96,15 +96,11 @@ mod tests {
         assert_eq!(take("^a", "ab", 5), ["a", "aa", "ab", "aaa", "aab"]);
     }
 
-    /// `(a|aa)*` derives most of its strings more than one way; enumerating the
-    /// automaton cannot emit duplicates.
     #[test]
     fn no_duplicates() {
         assert_eq!(take("^(a|aa)*$", "a", 5), ["", "a", "aa", "aaa", "aaaa"]);
     }
 
-    /// The whole contract: over a small alphabet, what comes out is exactly the
-    /// strings the regex itself matches, in the promised order.
     #[test]
     fn agrees_with_is_match() {
         const MAX_LEN: usize = 6;
@@ -147,9 +143,6 @@ mod tests {
         }
     }
 
-    /// Matches nothing at all — a boundary cannot sit between two word
-    /// characters — yet the automaton always has somewhere left to go, so only
-    /// the barren-run bound ends the search.
     #[test]
     fn unmatchable_pattern_terminates() {
         for pattern in [r"a\bb", r"a$b", r"a^b", r"\Ba\A", r"a\b\Bb"] {
@@ -157,7 +150,6 @@ mod tests {
         }
     }
 
-    /// Every word over the alphabet up to `max_len`, by length then lexicographically.
     fn words_up_to(alphabet: &str, max_len: usize) -> Vec<String> {
         let mut chars: Vec<char> = alphabet.chars().collect();
         chars.sort_unstable();
