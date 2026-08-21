@@ -8,7 +8,6 @@ version = "0.0.0"
 cargo-fuzz = true
 
 [dependencies]
-arbitrary = "1"
 libfuzzer-sys = "0.4"
 regex = "1.13.1"
 

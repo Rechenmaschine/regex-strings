@@ -1,22 +1,28 @@
 //! Differentially test enumeration against `regex::Regex::is_match`.
 #![no_main]
 
-use arbitrary::Unstructured;
 use libfuzzer_sys::fuzz_target;
 use regex::RegexBuilder;
-use regex_strings::{Alphabet, RegexExt};
+use regex_strings::RegexExt;
 
-const MAX_ALPHABET_LEN: usize = 4;
-const MAX_LEN: usize = 7;
-const ALPHABET_CHARS: &[char] = &[
-    '\0', '\n', '\r', '-', '0', '1', 'a', 'b', 'c', 'é', '中', '🙂',
+const ALPHABETS: &[&str] = &[
+    "", "a", "ab", "a0_-", "ab-\n", "\r\n", "éaé", "中🙂a", "\0a",
 ];
+const MAX_LEN: usize = 6;
 
 fuzz_target!(|data: &[u8]| {
-    let Some(case) = Case::from_bytes(data) else {
+    let Some((&alphabet_index, data)) = data.split_first() else {
         return;
     };
-    let Ok(regex) = RegexBuilder::new(case.pattern)
+    let Some((&max_len, pattern)) = data.split_first() else {
+        return;
+    };
+    let Ok(pattern) = std::str::from_utf8(pattern) else {
+        return;
+    };
+    let alphabet = ALPHABETS[alphabet_index as usize % ALPHABETS.len()];
+    let max_len = max_len as usize % (MAX_LEN + 1);
+    let Ok(regex) = RegexBuilder::new(pattern)
         .size_limit(1 << 16)
         .build()
     else {
@@ -24,10 +30,10 @@ fuzz_target!(|data: &[u8]| {
     };
 
     let found: Vec<String> = regex
-        .strings(case.alphabet.clone())
-        .max_len(case.max_len)
+        .strings(alphabet)
+        .max_len(max_len)
         .collect();
-    let expected: Vec<String> = words(case.alphabet.as_slice(), case.max_len)
+    let expected: Vec<String> = words(alphabet, max_len)
         .into_iter()
         .filter(|word| regex.is_match(word))
         .collect();
@@ -36,45 +42,24 @@ fuzz_target!(|data: &[u8]| {
         found,
         expected,
         "pattern {:?}, alphabet {:?}, max_len {}",
-        case.pattern,
-        case.alphabet.as_slice(),
-        case.max_len,
+        pattern,
+        alphabet,
+        max_len,
     );
 });
 
-struct Case<'a> {
-    pattern: &'a str,
-    alphabet: Alphabet,
-    max_len: usize,
-}
+fn words(alphabet: &str, max_len: usize) -> Vec<String> {
+    let mut chars: Vec<char> = alphabet.chars().collect();
+    chars.sort_unstable();
+    chars.dedup();
 
-impl<'a> Case<'a> {
-    fn from_bytes(data: &'a [u8]) -> Option<Self> {
-        let mut input = Unstructured::new(data);
-        let alphabet_len = input.int_in_range(0..=MAX_ALPHABET_LEN).ok()?;
-        let alphabet_bytes: [u8; MAX_ALPHABET_LEN] = input.arbitrary().ok()?;
-        let max_len = input.int_in_range(0..=MAX_LEN).ok()?;
-        let pattern = std::str::from_utf8(input.take_rest()).ok()?;
-        let alphabet: Alphabet = (0..alphabet_len)
-            .map(|index| ALPHABET_CHARS[alphabet_bytes[index] as usize % ALPHABET_CHARS.len()])
-            .collect();
-
-        Some(Self {
-            pattern,
-            alphabet,
-            max_len,
-        })
-    }
-}
-
-fn words(chars: &[char], max_len: usize) -> Vec<String> {
     let mut all = vec![String::new()];
     let mut level = vec![String::new()];
 
     for _ in 0..max_len {
         let mut next_level = Vec::with_capacity(level.len() * chars.len());
         for word in &level {
-            for &ch in chars {
+            for &ch in &chars {
                 let mut next = word.clone();
                 next.push(ch);
                 next_level.push(next);

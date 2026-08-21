@@ -125,7 +125,6 @@ dependencies = [
 name = "regex-strings-fuzz"
 version = "0.0.0"
 dependencies = [
- "arbitrary",
  "libfuzzer-sys",
  "regex",
  "regex-strings",
