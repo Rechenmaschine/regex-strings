@@ -35,7 +35,7 @@ jobs:
       - name: Prepare Pages site
         run: |
           mkdir -p dist
-          cp web/index.html web/main.js web/style.css dist/
+          cp web/index.html web/main.js dist/
           cp -R web/pkg dist/pkg
           touch dist/.nojekyll
 

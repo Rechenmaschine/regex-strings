@@ -24,7 +24,7 @@ function setStatus(message, isError = false) {
 
 function setOutput(result) {
   outputText = result.text;
-  output.textContent = result.text || "Your matches will appear here.";
+  output.value = result.text;
   count.textContent = `${result.count.toLocaleString()} ${result.count === 1 ? "word" : "words"}`;
   copyButton.disabled = !result.text;
   downloadButton.disabled = !result.text;
