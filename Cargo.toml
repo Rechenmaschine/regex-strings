@@ -1,0 +1,8 @@
+[package]
+name = "regex-strings"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+regex = "1.13.1"
+regex-syntax = "0.8.11"

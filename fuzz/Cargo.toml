@@ -1,0 +1,22 @@
+[package]
+name = "regex-strings-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+regex = "1.13.1"
+
+[dependencies.regex-strings]
+path = ".."
+
+[[bin]]
+name = "agrees_with_is_match"
+path = "fuzz_targets/agrees_with_is_match.rs"
+test = false
+doc = false
+bench = false

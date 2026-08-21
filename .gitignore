@@ -1,0 +1,7 @@
+/target/
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/corpus/
+/.idea/
+/.codebase-memory/
+.DS_Store
