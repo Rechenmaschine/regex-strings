@@ -15,8 +15,8 @@ regex = "1.13.1"
 path = ".."
 
 [[bin]]
-name = "agrees_with_is_match"
-path = "fuzz_targets/agrees_with_is_match.rs"
+name = "enumeration_matches_regex"
+path = "fuzz_targets/enumeration_matches_regex.rs"
 test = false
 doc = false
 bench = false
