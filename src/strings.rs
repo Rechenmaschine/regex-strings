@@ -5,43 +5,39 @@ use crate::automaton::{Dfa, Nfa};
 
 /// An iterator over the strings a regex matches. See [`crate::RegexExt::strings`].
 ///
-/// All the state is the one path the depth-first walk is standing on.
+/// It keeps one depth-first path and memoized lookahead.
 pub struct Strings {
     dfa: Dfa,
     start: Option<u32>,
-    /// Length being enumerated right now.
+    /// Current target length.
     target: usize,
     max_len: Option<usize>,
-    /// Whether a pass has run, and so whether `target` needs advancing.
+    /// Whether the current target length has been started.
     started: bool,
-    /// Consecutive lengths tried that turned up nothing.
+    /// Consecutive target lengths without a match.
     barren: usize,
-    /// The states along `word`, starting with the start state, so one longer
-    /// than `word` has characters.
+    /// DFA states along `word`, including its start state.
     path: Vec<Step>,
     word: String,
-    /// Memo for [`Strings::probe`], indexed by `[steps][state]`.
+    /// Memoized lookahead indexed by `[steps][state]`.
     outlook: Vec<Vec<Option<Outlook>>>,
 }
 
 #[derive(Clone, Copy)]
 struct Step {
     state: u32,
-    /// Index of the next alphabet character to try from here.
+    /// Next transition to try from this state.
     next: usize,
 }
 
-/// What is still ahead, some number of characters on from a state.
-///
-/// Ordered by how promising it is, so merging what several characters lead to
-/// is `max`.
+/// Whether a match is reachable at an exact distance.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Outlook {
-    /// No path that long leaves the state at all.
+    /// No path of that length exists.
     Nothing,
-    /// Paths that long exist, but none of them end in a match.
+    /// A path exists, but none ends in a match.
     Barren,
-    /// Some path that long ends in a match.
+    /// At least one path ends in a match.
     Matches,
 }
 
@@ -85,8 +81,7 @@ impl Strings {
         self.word.pop();
     }
 
-    /// Starts the pass for the next length that has any matches, or returns
-    /// `false` once no longer string can exist at all.
+    /// Starts the next target length that can produce a match.
     fn begin_pass(&mut self) -> bool {
         let Some(start) = self.start else {
             return false;
@@ -113,8 +108,8 @@ impl Strings {
                 Outlook::Barren => {}
             }
 
-            // A sparse language may have empty lengths, but a barren run longer
-            // than the number of DFA states cannot contain a later match.
+            // A barren run longer than the number of DFA states cannot contain
+            // a later match.
             self.barren += 1;
             if self.barren > self.dfa.state_count() {
                 return false;
@@ -123,10 +118,7 @@ impl Strings {
         }
     }
 
-    /// What is still possible `steps` characters on from `state`.
-    ///
-    /// Memoized, so each state is worked out once per distance rather than once
-    /// per prefix arriving at it.
+    /// Returns whether a match is reachable in exactly `steps` transitions.
     fn probe(&mut self, state: u32, steps: usize) -> Outlook {
         if steps == 0 {
             return match self.dfa.accepting(state) {
@@ -144,7 +136,7 @@ impl Strings {
             return known;
         }
 
-        // Recursion can grow the DFA state table, so copy the transitions first.
+        // `onward` may grow the DFA, so copy its transitions before recursing.
         let onward = self.dfa.onward(state).to_vec();
         let mut outlook = Outlook::Nothing;
         for (_, target) in onward {

@@ -3,11 +3,9 @@ use std::collections::hash_map::Entry;
 
 use regex_syntax::hir::{Class, Hir, HirKind, Look};
 
-/// The NFA determinized on demand.
+/// An NFA determinized on demand.
 ///
-/// A state is a set of NFA states *plus the character just consumed*, since
-/// that is what a `$` or `\b` one step further on will look back at. Both are
-/// needed to decide what happens next, so both make up the identity.
+/// The previous character is part of the state because `$` and `\b` inspect it.
 pub(crate) struct Dfa {
     nfa: Nfa,
     alphabet: Vec<char>,
@@ -33,7 +31,7 @@ impl Dfa {
         }
     }
 
-    /// Interns a state, or `None` if no match is reachable from it.
+    /// Interns a state, returning `None` for a dead state.
     pub(crate) fn intern(&mut self, mut set: Vec<u32>, prev: Option<char>) -> Option<u32> {
         set.sort_unstable();
         set.dedup();
@@ -104,26 +102,25 @@ impl Dfa {
 #[derive(Default)]
 struct NfaState {
     eps: Vec<u32>,
-    /// ε-transitions crossable only where the guard holds.
+    /// Guarded ε-transitions.
     guarded: Vec<(Look, u32)>,
     trans: Vec<(char, u32)>,
 }
 
-/// An ε-NFA with one start and one accepting state (Thompson's invariant).
+/// An ε-NFA with one start and one accepting state.
 pub(crate) struct Nfa {
     states: Vec<NfaState>,
     start: u32,
     accept: u32,
-    /// Whether the accepting state is reachable from this state, at all.
+    /// States that can reach the accept state anywhere.
     alive_anywhere: Vec<bool>,
-    /// The same, but past the first character, where a `^` can no longer be
-    /// crossed.
+    /// The same after the first character, where plain `^` cannot be crossed.
     alive_later: Vec<bool>,
 }
 
 impl Nfa {
     pub(crate) fn build(hir: &Hir, alphabet: &[char]) -> Nfa {
-        // Wrap unanchored searches as `alphabet* pattern alphabet*`.
+        // An unanchored search is `alphabet* pattern alphabet*`.
         let mut nfa = Nfa {
             states: vec![NfaState::default(), NfaState::default()],
             start: 0,
@@ -142,7 +139,7 @@ impl Nfa {
 
         nfa.alive_anywhere = nfa.co_accessible(|_| true);
         nfa.alive_later = nfa.co_accessible(|look| match look {
-            // A single-line `^` cannot be crossed after the first character.
+            // Plain `^` cannot occur after the first character.
             Look::Start => false,
             Look::StartLF => alphabet.contains(&'\n'),
             Look::StartCRLF => alphabet.contains(&'\n') || alphabet.contains(&'\r'),
@@ -160,9 +157,7 @@ impl Nfa {
         self.states[from as usize].eps.push(to);
     }
 
-    /// Compiles `hir` into a fresh `(start, accept)` pair of states.
-    ///
-    /// A sub-pattern that cannot be spelled from the alphabet matches nothing.
+    /// Compiles one HIR node into a fresh `(start, accept)` pair.
     fn compile(&mut self, hir: &Hir, alphabet: &[char]) -> (u32, u32) {
         let (start, accept) = (self.push(), self.push());
         match hir.kind() {
@@ -234,8 +229,7 @@ impl Nfa {
             from = sub_accept;
         }
         match (rep.max, last) {
-            // Reuse the last mandatory copy for `x{n,}` to avoid expanding
-            // nested quantifiers.
+            // Reuse the last mandatory copy for `x{n,}`.
             (None, Some(sub_start)) => self.eps(from, sub_start),
             (None, None) => {
                 let (sub_start, sub_accept) = self.compile(&rep.sub, alphabet);
@@ -255,7 +249,7 @@ impl Nfa {
         self.eps(from, accept);
     }
 
-    /// Backwards reachability, conservatively accounting for guarded edges.
+    /// Computes backward reachability to the accept state.
     fn co_accessible(&self, allow: impl Fn(Look) -> bool) -> Vec<bool> {
         let mut back = vec![Vec::new(); self.states.len()];
         for (from, state) in self.states.iter().enumerate() {
@@ -283,7 +277,7 @@ impl Nfa {
         alive
     }
 
-    /// The ε-closure at a position with `prev` behind and `next` ahead.
+    /// Computes the ε-closure at a position with `prev` behind and `next` ahead.
     fn closure(&self, states: &[u32], prev: Option<char>, next: Option<char>) -> Vec<u32> {
         let mut seen = vec![false; self.states.len()];
         let mut open = Vec::with_capacity(states.len());
@@ -324,8 +318,7 @@ impl Nfa {
     }
 }
 
-/// Whether a look-around holds at a position with `prev` behind it and `next`
-/// ahead of it.
+/// Evaluates a look-around at a position with `prev` behind and `next` ahead.
 fn look_holds(look: Look, prev: Option<char>, next: Option<char>) -> bool {
     let ascii_word = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric() || c == '_');
     let word = |c: Option<char>| c.is_some_and(regex_syntax::is_word_character);
