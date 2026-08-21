@@ -4,6 +4,8 @@ name = "regex-strings-fuzz"
 publish = false
 version = "0.0.0"
 
+[workspace]
+
 [package.metadata]
 cargo-fuzz = true
 
@@ -12,7 +14,7 @@ libfuzzer-sys = "0.4"
 regex = "1.13.1"
 
 [dependencies.regex-strings]
-path = ".."
+path = "../crate"
 
 [[bin]]
 bench = false

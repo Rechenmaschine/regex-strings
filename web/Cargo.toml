@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 js-sys = "0.3"
 regex = "1.13.1"
-regex-strings = { path = ".." }
+regex-strings = { path = "../crate" }
 wasm-bindgen = "0.2"
 
 [package.metadata.wasm-pack.profile.release]
