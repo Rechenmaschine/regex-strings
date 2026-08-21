@@ -49,19 +49,16 @@ struct Case<'a> {
 
 impl<'a> Case<'a> {
     fn from_bytes(data: &'a [u8]) -> Option<Self> {
-        let pattern = std::str::from_utf8(data.get(1..).unwrap_or_default()).ok()?;
-        let seed = data.iter().fold(0_u64, |seed, byte| {
-            seed.wrapping_mul(16_777_619) ^ u64::from(*byte)
-        });
+        let pattern = std::str::from_utf8(data).ok()?;
         let alphabet_len = data.first().copied().unwrap_or_default() as usize
             % (MAX_ALPHABET_LEN + 1);
         let alphabet: Alphabet = (0..alphabet_len)
             .map(|index| {
-                let seed = seed.rotate_left((index * 13) as u32);
-                ALPHABET_CHARS[seed as usize % ALPHABET_CHARS.len()]
+                let byte = data.get(index + 2).copied().unwrap_or_default();
+                ALPHABET_CHARS[byte as usize % ALPHABET_CHARS.len()]
             })
             .collect();
-        let max_len = seed as usize % (MAX_LEN + 1);
+        let max_len = data.get(1).copied().unwrap_or_default() as usize % (MAX_LEN + 1);
 
         Some(Self {
             pattern,
