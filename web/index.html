@@ -11,11 +11,11 @@
   <body>
     <main class="shell">
       <header class="masthead">
-        <div>
+        <div class="masthead-top">
           <h1>Regex match generator</h1>
-          <p class="lede">Regular expressions define languages over alphabets. This tool enumerates the strings in such a language. Since regular expressions typically describe infinite languages, the enumeration must be bounded by a maximum word length and a finite alphabet. The generator uses the regular expression syntax supported by Rust’s <code>regex</code> crate.</p>
+          <a class="repo-link" href="https://github.com/Rechenmaschine/regex-strings" target="_blank" rel="noreferrer">source</a>
         </div>
-        <a class="repo-link" href="https://github.com/Rechenmaschine/regex-strings" target="_blank" rel="noreferrer">source</a>
+        <p class="lede">Regular expressions define languages over alphabets. This tool enumerates the strings in such a language. Since regular expressions typically describe infinite languages, the enumeration must be bounded by a maximum word length and a finite alphabet. The generator uses the regular expression syntax supported by Rust’s <code>regex</code> crate.</p>
       </header>
 
       <section class="workspace" aria-label="Regex string generator">
@@ -70,7 +70,9 @@
               <button id="download" class="text-button" type="button" disabled>Download</button>
             </div>
           </div>
-          <pre id="output" class="output" tabindex="0" aria-label="Generated matching strings"><span class="placeholder">Your matches will appear here.</span></pre>
+          <div class="output-frame">
+            <pre id="output" class="output" tabindex="0" aria-label="Generated matching strings"><span class="placeholder">Your matches will appear here.</span></pre>
+          </div>
         </section>
       </section>
 
