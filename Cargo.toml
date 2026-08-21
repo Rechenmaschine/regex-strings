@@ -2,6 +2,13 @@
 edition = "2024"
 name = "regex-strings"
 version = "0.1.0"
+description = "Lazily enumerate strings matched by a regular expression over a finite alphabet"
+exclude = [".github/", "fuzz/", "web/"]
+homepage = "https://louisschell.de/regex-strings/"
+keywords = ["regex", "strings", "enumeration", "generation"]
+readme = "README.md"
+repository = "https://github.com/Rechenmaschine/regex-strings"
+rust-version = "1.85"
 
 [dependencies]
 regex = "1.13.1"
