@@ -1,6 +1,7 @@
 //! Differentially test enumeration against `regex::Regex::is_match`.
 #![no_main]
 
+use arbitrary::Unstructured;
 use libfuzzer_sys::fuzz_target;
 use regex::RegexBuilder;
 use regex_strings::{Alphabet, RegexExt};
@@ -49,16 +50,14 @@ struct Case<'a> {
 
 impl<'a> Case<'a> {
     fn from_bytes(data: &'a [u8]) -> Option<Self> {
-        let pattern = std::str::from_utf8(data).ok()?;
-        let alphabet_len = data.first().copied().unwrap_or_default() as usize
-            % (MAX_ALPHABET_LEN + 1);
+        let mut input = Unstructured::new(data);
+        let alphabet_len = input.int_in_range(0..=MAX_ALPHABET_LEN).ok()?;
+        let alphabet_bytes: [u8; MAX_ALPHABET_LEN] = input.arbitrary().ok()?;
+        let max_len = input.int_in_range(0..=MAX_LEN).ok()?;
+        let pattern = std::str::from_utf8(input.take_rest()).ok()?;
         let alphabet: Alphabet = (0..alphabet_len)
-            .map(|index| {
-                let byte = data.get(index + 2).copied().unwrap_or_default();
-                ALPHABET_CHARS[byte as usize % ALPHABET_CHARS.len()]
-            })
+            .map(|index| ALPHABET_CHARS[alphabet_bytes[index] as usize % ALPHABET_CHARS.len()])
             .collect();
-        let max_len = data.get(1).copied().unwrap_or_default() as usize % (MAX_LEN + 1);
 
         Some(Self {
             pattern,
