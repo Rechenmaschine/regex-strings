@@ -136,8 +136,7 @@ impl Strings {
             return known;
         }
 
-        // Cache exact-distance reachability so backtracking does not repeat the
-        // same DFA subproblem for every prefix of a word.
+        // We cache this to avoid repeating DFA subproblems.
         // `onward` may grow the DFA, so copy its transitions before recursing.
         let onward = self.dfa.onward(state).to_vec();
         let mut outlook = Outlook::Nothing;
