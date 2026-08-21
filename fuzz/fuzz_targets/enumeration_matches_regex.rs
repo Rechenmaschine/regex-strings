@@ -1,47 +1,92 @@
-//! Compare enumeration with `regex::Regex::is_match` over a small alphabet.
+//! Differentially test enumeration against `regex::Regex::is_match`.
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
 use regex::RegexBuilder;
-use regex_strings::RegexExt;
+use regex_strings::{Alphabet, RegexExt};
 
-const ALPHABETS: &[&str] = &["", "a", "ba", "ab-\n", "éaé", "\r\n", "b-a\nb"];
-const MAX_LEN: usize = 6;
+const MAX_ALPHABET_LEN: usize = 4;
+const MAX_LEN: usize = 7;
+const ALPHABET_CHARS: &[char] = &[
+    '\0', '\n', '\r', '-', '0', '1', 'a', 'b', 'c', 'é', '中', '🙂',
+];
 
 fuzz_target!(|data: &[u8]| {
-    let alphabet = ALPHABETS[data.first().copied().unwrap_or_default() as usize % ALPHABETS.len()];
-    let max_len = data.get(1).copied().unwrap_or_default() as usize % (MAX_LEN + 1);
-
-    let Ok(pattern) = std::str::from_utf8(data) else {
+    let Some(case) = Case::from_bytes(data) else {
         return;
     };
-    let Ok(re) = RegexBuilder::new(pattern).size_limit(1 << 16).build() else {
+    let Ok(regex) = RegexBuilder::new(case.pattern)
+        .size_limit(1 << 16)
+        .build()
+    else {
         return;
     };
 
-    let found: Vec<String> = re.strings(alphabet).max_len(max_len).collect();
-
-    let expected: Vec<String> = words(alphabet, max_len)
+    let found: Vec<String> = regex
+        .strings(case.alphabet.clone())
+        .max_len(case.max_len)
+        .collect();
+    let expected: Vec<String> = words(case.alphabet.as_slice(), case.max_len)
         .into_iter()
-        .filter(|s| re.is_match(s))
+        .filter(|word| regex.is_match(word))
         .collect();
 
-    assert_eq!(found, expected, "pattern {pattern:?}");
+    assert_eq!(
+        found,
+        expected,
+        "pattern {:?}, alphabet {:?}, max_len {}",
+        case.pattern,
+        case.alphabet.as_slice(),
+        case.max_len,
+    );
 });
 
-fn words(alphabet: &str, max_len: usize) -> Vec<String> {
-    let mut chars: Vec<char> = alphabet.chars().collect();
-    chars.sort_unstable();
-    chars.dedup();
+struct Case<'a> {
+    pattern: &'a str,
+    alphabet: Alphabet,
+    max_len: usize,
+}
 
+impl<'a> Case<'a> {
+    fn from_bytes(data: &'a [u8]) -> Option<Self> {
+        let pattern = std::str::from_utf8(data.get(1..).unwrap_or_default()).ok()?;
+        let seed = data.iter().fold(0_u64, |seed, byte| {
+            seed.wrapping_mul(16_777_619) ^ u64::from(*byte)
+        });
+        let alphabet_len = data.first().copied().unwrap_or_default() as usize
+            % (MAX_ALPHABET_LEN + 1);
+        let alphabet: Alphabet = (0..alphabet_len)
+            .map(|index| {
+                let seed = seed.rotate_left((index * 13) as u32);
+                ALPHABET_CHARS[seed as usize % ALPHABET_CHARS.len()]
+            })
+            .collect();
+        let max_len = seed as usize % (MAX_LEN + 1);
+
+        Some(Self {
+            pattern,
+            alphabet,
+            max_len,
+        })
+    }
+}
+
+fn words(chars: &[char], max_len: usize) -> Vec<String> {
     let mut all = vec![String::new()];
     let mut level = vec![String::new()];
+
     for _ in 0..max_len {
-        level = level
-            .iter()
-            .flat_map(|word| chars.iter().map(move |c| format!("{word}{c}")))
-            .collect();
-        all.extend(level.iter().cloned());
+        let mut next_level = Vec::with_capacity(level.len() * chars.len());
+        for word in &level {
+            for &ch in chars {
+                let mut next = word.clone();
+                next.push(ch);
+                next_level.push(next);
+            }
+        }
+        all.extend(next_level.iter().cloned());
+        level = next_level;
     }
+
     all
 }
