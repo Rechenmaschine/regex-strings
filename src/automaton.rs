@@ -79,6 +79,8 @@ impl Dfa {
 
     pub(crate) fn onward(&mut self, id: u32) -> &[(char, u32)] {
         if self.states[id as usize].onward.is_none() {
+            // Transition construction can intern new states, so do not hold a
+            // borrow into `states` while expanding this row.
             let set = self.states[id as usize].set.clone();
             let prev = self.states[id as usize].prev;
 
@@ -138,8 +140,10 @@ impl Nfa {
         }
 
         nfa.alive_anywhere = nfa.co_accessible(|_| true);
+        // After the first character, a plain `^` can no longer be crossed.
+        // Keeping a separate mask lets lazy determinization discard those dead
+        // paths before they reach the search.
         nfa.alive_later = nfa.co_accessible(|look| match look {
-            // Plain `^` cannot occur after the first character.
             Look::Start => false,
             Look::StartLF => alphabet.contains(&'\n'),
             Look::StartCRLF => alphabet.contains(&'\n') || alphabet.contains(&'\r'),
