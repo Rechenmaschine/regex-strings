@@ -21,3 +21,7 @@ assert_eq!(found, ["ad", "abd", "acd", "abbd"]);
 Strings are yielded shortest-first, then lexicographically. Use anchors to
 enumerate the language described by a pattern; unanchored patterns may produce
 an infinite iterator. Use `take` or `max_len` to bound enumeration.
+
+## Demo
+
+The repository includes a [WebAssembly demo](https://github.com/Rechenmaschine/regex-strings).

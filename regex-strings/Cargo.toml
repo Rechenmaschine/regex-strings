@@ -3,7 +3,6 @@ categories = ["algorithms", "text-processing"]
 description = "Lazily enumerate strings matched by a regular expression over a finite alphabet"
 documentation = "https://docs.rs/regex-strings"
 edition = "2024"
-homepage = "https://louisschell.de/regex-strings/"
 keywords = ["regex", "strings", "enumeration", "generation"]
 license = "MIT OR Apache-2.0"
 name = "regex-strings"
