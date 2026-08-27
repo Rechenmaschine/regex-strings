@@ -3,9 +3,6 @@ use regex::Regex;
 use regex_strings::RegexExt;
 use wasm_bindgen::prelude::*;
 
-const MAX_OUTPUT_BYTES: usize = 1_000_000;
-const MAX_OUTPUT_WORDS: u32 = 100_000;
-
 /// Generates newline-separated matches for the browser demo.
 ///
 /// `word_limit` bounds the number of emitted strings. When it is `None`, the
@@ -34,12 +31,7 @@ pub fn generate(
     Reflect::set(
         &object,
         &JsValue::from_str("count"),
-        &JsValue::from_f64(f64::from(result.count)),
-    )?;
-    Reflect::set(
-        &object,
-        &JsValue::from_str("truncated"),
-        &JsValue::from_bool(result.truncated),
+        &JsValue::from_f64(result.count as f64),
     )?;
     Ok(object.into())
 }
@@ -47,8 +39,7 @@ pub fn generate(
 #[derive(Debug)]
 struct Generation {
     text: String,
-    count: u32,
-    truncated: bool,
+    count: usize,
 }
 
 fn generate_matches(
@@ -69,19 +60,9 @@ fn generate_matches(
     }
 
     let mut output = String::new();
-    let mut count = 0u32;
-    let mut truncated = false;
+    let mut count = 0usize;
     for (index, word) in strings.enumerate() {
         if word_limit.is_some_and(|limit| index >= limit) {
-            break;
-        }
-        let required_bytes = output
-            .len()
-            .saturating_add(usize::from(count > 0))
-            .saturating_add(word.len())
-            .saturating_add(1);
-        if count >= MAX_OUTPUT_WORDS || required_bytes > MAX_OUTPUT_BYTES {
-            truncated = true;
             break;
         }
         if count > 0 {
@@ -97,21 +78,18 @@ fn generate_matches(
     Ok(Generation {
         text: output,
         count,
-        truncated,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::generate_matches;
-    use super::{MAX_OUTPUT_BYTES, MAX_OUTPUT_WORDS};
 
     #[test]
     fn generates_matches_with_a_trailing_newline() {
         let result = generate_matches("^a(b|c)*d$", "abcd", None, Some(4)).unwrap();
         assert_eq!(result.text, "ad\nabd\nacd\nabbd\n");
         assert_eq!(result.count, 4);
-        assert!(!result.truncated);
     }
 
     #[test]
@@ -135,10 +113,9 @@ mod tests {
     }
 
     #[test]
-    fn truncates_before_the_output_becomes_huge() {
-        let result = generate_matches("^[ab]*$", "ab", None, None).unwrap();
-        assert!(result.truncated);
-        assert!(result.text.len() <= MAX_OUTPUT_BYTES);
-        assert!(result.count <= MAX_OUTPUT_WORDS);
+    fn emits_output_larger_than_the_old_browser_cap() {
+        let result = generate_matches("^a*[bc]$", "abc", Some(1_000), None).unwrap();
+        assert_eq!(result.count, 2_000);
+        assert!(result.text.len() > 1_000_000);
     }
 }

@@ -32,7 +32,6 @@ function setOutput(result) {
   count.textContent = `${result.count.toLocaleString()} ${result.count === 1 ? "word" : "words"}`;
   copyButton.disabled = !result.text;
   downloadButton.disabled = !result.text;
-  return result.truncated;
 }
 
 function numberOrNull(input, allowZero = false) {
@@ -84,12 +83,10 @@ form.addEventListener("submit", (event) => {
   requestAnimationFrame(() => {
     try {
       const result = generate(patternInput.value, alphabetInput.value, maxLength, wordLimit);
-      const truncated = setOutput(result);
-      setStatus(truncated
-        ? `Showing ${result.count.toLocaleString()} matches; output truncated for browser safety.`
-        : "Done.");
+      setOutput(result);
+      setStatus("Done.");
     } catch (error) {
-      setOutput({ text: "", count: 0, truncated: false });
+      setOutput({ text: "", count: 0 });
       setStatus(error instanceof Error ? error.message : String(error), true);
     } finally {
       generateButton.disabled = false;
@@ -98,7 +95,7 @@ form.addEventListener("submit", (event) => {
 });
 
 clearButton.addEventListener("click", () => {
-  setOutput({ text: "", count: 0, truncated: false });
+  setOutput({ text: "", count: 0 });
   setStatus(ready ? "Ready." : "Loading WebAssembly…");
 });
 
