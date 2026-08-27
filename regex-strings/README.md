@@ -24,4 +24,4 @@ an infinite iterator. Use `take` or `max_len` to bound enumeration.
 
 ## Demo
 
-The repository includes a [WebAssembly demo](https://github.com/Rechenmaschine/regex-strings).
+Try the [WebAssembly demo](https://rechenmaschine.github.io/regex-strings/).
