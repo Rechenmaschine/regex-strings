@@ -14,7 +14,7 @@ libfuzzer-sys = "0.4"
 regex = "1.13.1"
 
 [dependencies.regex-strings]
-path = "../crate"
+path = "../regex-strings"
 
 [[bin]]
 bench = false

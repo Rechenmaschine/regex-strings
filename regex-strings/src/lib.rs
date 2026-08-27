@@ -1,3 +1,6 @@
+#![deny(unsafe_code)]
+#![warn(missing_docs)]
+
 //! Enumerate the strings matched by a [`Regex`], shortest first.
 //!
 //! ```
@@ -26,7 +29,7 @@ pub use strings::Strings;
 
 use regex::Regex;
 
-/// Enumeration for [`Regex`].
+/// Extends [`Regex`] with lazy finite-alphabet enumeration.
 pub trait RegexExt {
     /// Iterates the strings over `alphabet` that this regex matches, in
     /// nondecreasing length and lexicographic within each length.
@@ -72,7 +75,7 @@ mod tests {
         assert_eq!(alphabet.as_slice(), &['x', 'z']);
     }
 
-    fn take(pattern: &str, alphabet: &str, n: usize) -> Vec<String> {
+    fn collect_matches(pattern: &str, alphabet: &str, n: usize) -> Vec<String> {
         Regex::new(pattern)
             .unwrap()
             .strings(alphabet)
@@ -82,23 +85,35 @@ mod tests {
 
     #[test]
     fn anchored() {
-        assert_eq!(take("^abc$", "abc", 9), ["abc"]);
-        assert_eq!(take("^colou?r$", "colour", 9), ["color", "colour"]);
-        assert_eq!(take("^a{2,4}$", "a", 9), ["aa", "aaa", "aaaa"]);
-        assert_eq!(take("^[ab]*$", "ab", 4), ["", "a", "b", "aa"]);
-        assert_eq!(take("^a.b$", "abc", 9), ["aab", "abb", "acb"]);
-        assert_eq!(take("a+", "bc", 9), Vec::<String>::new());
+        assert_eq!(collect_matches("^abc$", "abc", 9), ["abc"]);
+        assert_eq!(
+            collect_matches("^colou?r$", "colour", 9),
+            ["color", "colour"]
+        );
+        assert_eq!(collect_matches("^a{2,4}$", "a", 9), ["aa", "aaa", "aaaa"]);
+        assert_eq!(collect_matches("^[ab]*$", "ab", 4), ["", "a", "b", "aa"]);
+        assert_eq!(collect_matches("^a.b$", "abc", 9), ["aab", "abb", "acb"]);
+        assert_eq!(collect_matches("a+", "bc", 9), Vec::<String>::new());
     }
 
     #[test]
     fn unanchored() {
-        assert_eq!(take("b", "ab", 5), ["b", "ab", "ba", "bb", "aab"]);
-        assert_eq!(take("^a", "ab", 5), ["a", "aa", "ab", "aaa", "aab"]);
+        assert_eq!(
+            collect_matches("b", "ab", 5),
+            ["b", "ab", "ba", "bb", "aab"]
+        );
+        assert_eq!(
+            collect_matches("^a", "ab", 5),
+            ["a", "aa", "ab", "aaa", "aab"]
+        );
     }
 
     #[test]
     fn no_duplicates() {
-        assert_eq!(take("^(a|aa)*$", "a", 5), ["", "a", "aa", "aaa", "aaaa"]);
+        assert_eq!(
+            collect_matches("^(a|aa)*$", "a", 5),
+            ["", "a", "aa", "aaa", "aaaa"]
+        );
     }
 
     #[test]
@@ -146,21 +161,27 @@ mod tests {
     #[test]
     fn unmatchable_pattern_terminates() {
         for pattern in [r"a\bb", r"a$b", r"a^b", r"\Ba\A", r"a\b\Bb"] {
-            assert_eq!(take(pattern, "ab-", 1), Vec::<String>::new(), "{pattern}");
+            assert_eq!(
+                collect_matches(pattern, "ab-", 1),
+                Vec::<String>::new(),
+                "{pattern}"
+            );
         }
     }
 
     fn words_up_to(alphabet: &str, max_len: usize) -> Vec<String> {
         let mut chars: Vec<char> = alphabet.chars().collect();
         chars.sort_unstable();
+        chars.dedup();
         let mut all = vec![String::new()];
         let mut level = vec![String::new()];
         for _ in 0..max_len {
-            level = level
+            let next_level: Vec<String> = level
                 .iter()
                 .flat_map(|word| chars.iter().map(move |c| format!("{word}{c}")))
                 .collect();
-            all.extend(level.iter().cloned());
+            all.extend(next_level.iter().cloned());
+            level = next_level;
         }
         all
     }

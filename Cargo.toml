@@ -1,4 +1,4 @@
 [workspace]
-members = ["crate"]
 exclude = ["fuzz", "web"]
+members = ["regex-strings"]
 resolver = "2"

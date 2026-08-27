@@ -22,6 +22,10 @@ function setStatus(message, isError = false) {
   status.classList.toggle("error", isError);
 }
 
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function setOutput(result) {
   outputText = result.text;
   output.value = result.text;
@@ -66,7 +70,7 @@ form.addEventListener("submit", (event) => {
     maxLength = numberOrNull(maxLengthInput, true);
     wordLimit = unlimitedInput.checked ? null : numberOrNull(wordLimitInput);
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(errorMessage(error), true);
     return;
   }
   if (maxLength === null && wordLimit === null) {
@@ -99,8 +103,12 @@ clearButton.addEventListener("click", () => {
 });
 
 copyButton.addEventListener("click", async () => {
-  await navigator.clipboard.writeText(outputText);
-  setStatus("Copied to clipboard.");
+  try {
+    await navigator.clipboard.writeText(outputText);
+    setStatus("Copied to clipboard.");
+  } catch (error) {
+    setStatus(`Could not copy output: ${errorMessage(error)}`, true);
+  }
 });
 
 downloadButton.addEventListener("click", () => {

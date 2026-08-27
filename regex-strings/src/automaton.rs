@@ -22,8 +22,8 @@ struct DfaState {
 }
 
 impl Dfa {
-    pub(crate) fn new(nfa: Nfa, alphabet: Vec<char>) -> Dfa {
-        Dfa {
+    pub(crate) fn new(nfa: Nfa, alphabet: Vec<char>) -> Self {
+        Self {
             nfa,
             alphabet,
             states: Vec::new(),
@@ -47,7 +47,8 @@ impl Dfa {
         match self.lookup.entry((set, prev)) {
             Entry::Occupied(seen) => Some(*seen.get()),
             Entry::Vacant(slot) => {
-                let id = self.states.len() as u32;
+                let id =
+                    u32::try_from(self.states.len()).expect("DFA has more than u32::MAX states");
                 let set = slot.key().0.clone();
                 slot.insert(id);
                 let accepting = self
@@ -84,8 +85,8 @@ impl Dfa {
             let prev = self.states[id as usize].prev;
 
             let mut onward = Vec::new();
-            for i in 0..self.alphabet.len() {
-                let ch = self.alphabet[i];
+            for index in 0..self.alphabet.len() {
+                let ch = self.alphabet[index];
                 let reached = self.nfa.step(&self.nfa.closure(&set, prev, Some(ch)), ch);
                 if let Some(target) = self.intern(reached, Some(ch)) {
                     onward.push((ch, target));
@@ -120,7 +121,7 @@ pub(crate) struct Nfa {
 }
 
 impl Nfa {
-    pub(crate) fn build(hir: &Hir, alphabet: &[char]) -> Nfa {
+    pub(crate) fn build(hir: &Hir, alphabet: &[char]) -> Self {
         // An unanchored search is `alphabet* pattern alphabet*`.
         let mut nfa = Nfa {
             states: vec![NfaState::default(), NfaState::default()],
@@ -151,7 +152,7 @@ impl Nfa {
 
     fn push(&mut self) -> u32 {
         self.states.push(NfaState::default());
-        (self.states.len() - 1) as u32
+        u32::try_from(self.states.len() - 1).expect("NFA has more than u32::MAX states")
     }
 
     fn eps(&mut self, from: u32, to: u32) {
@@ -261,7 +262,8 @@ impl Nfa {
                 .filter(|&&(look, _)| allow(look))
                 .map(|&(_, to)| to);
             for to in state.eps.iter().copied().chain(consuming).chain(guarded) {
-                back[to as usize].push(from as u32);
+                back[to as usize]
+                    .push(u32::try_from(from).expect("NFA has more than u32::MAX states"));
             }
         }
 
@@ -321,9 +323,6 @@ impl Nfa {
 
 /// Evaluates a look-around at a position with `prev` behind and `next` ahead.
 fn look_holds(look: Look, prev: Option<char>, next: Option<char>) -> bool {
-    let ascii_word = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric() || c == '_');
-    let word = |c: Option<char>| c.is_some_and(regex_syntax::is_word_character);
-
     match look {
         Look::Start => prev.is_none(),
         Look::End => next.is_none(),
@@ -335,19 +334,27 @@ fn look_holds(look: Look, prev: Option<char>, next: Option<char>) -> bool {
         Look::EndCRLF => {
             next.is_none() || next == Some('\r') || (next == Some('\n') && prev != Some('\r'))
         }
-        Look::WordAscii => ascii_word(prev) != ascii_word(next),
-        Look::WordAsciiNegate => ascii_word(prev) == ascii_word(next),
-        Look::WordUnicode => word(prev) != word(next),
-        Look::WordUnicodeNegate => word(prev) == word(next),
-        Look::WordStartAscii => !ascii_word(prev) && ascii_word(next),
-        Look::WordEndAscii => ascii_word(prev) && !ascii_word(next),
-        Look::WordStartUnicode => !word(prev) && word(next),
-        Look::WordEndUnicode => word(prev) && !word(next),
-        Look::WordStartHalfAscii => !ascii_word(prev),
-        Look::WordEndHalfAscii => !ascii_word(next),
-        Look::WordStartHalfUnicode => !word(prev),
-        Look::WordEndHalfUnicode => !word(next),
+        Look::WordAscii => is_ascii_word(prev) != is_ascii_word(next),
+        Look::WordAsciiNegate => is_ascii_word(prev) == is_ascii_word(next),
+        Look::WordUnicode => is_unicode_word(prev) != is_unicode_word(next),
+        Look::WordUnicodeNegate => is_unicode_word(prev) == is_unicode_word(next),
+        Look::WordStartAscii => !is_ascii_word(prev) && is_ascii_word(next),
+        Look::WordEndAscii => is_ascii_word(prev) && !is_ascii_word(next),
+        Look::WordStartUnicode => !is_unicode_word(prev) && is_unicode_word(next),
+        Look::WordEndUnicode => is_unicode_word(prev) && !is_unicode_word(next),
+        Look::WordStartHalfAscii => !is_ascii_word(prev),
+        Look::WordEndHalfAscii => !is_ascii_word(next),
+        Look::WordStartHalfUnicode => !is_unicode_word(prev),
+        Look::WordEndHalfUnicode => !is_unicode_word(next),
     }
+}
+
+fn is_ascii_word(character: Option<char>) -> bool {
+    character.is_some_and(|character| character.is_ascii_alphanumeric() || character == '_')
+}
+
+fn is_unicode_word(character: Option<char>) -> bool {
+    character.is_some_and(regex_syntax::is_word_character)
 }
 
 fn class_contains(class: &Class, ch: char) -> bool {

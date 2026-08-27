@@ -21,34 +21,24 @@ fuzz_target!(|data: &[u8]| {
         return;
     };
     let alphabet = ALPHABETS[alphabet_index as usize % ALPHABETS.len()];
-    let max_len = max_len as usize % (MAX_LEN + 1);
-    let Ok(regex) = RegexBuilder::new(pattern)
-        .size_limit(1 << 16)
-        .build()
-    else {
+    let max_len = usize::from(max_len) % (MAX_LEN + 1);
+    let Ok(regex) = RegexBuilder::new(pattern).size_limit(1 << 16).build() else {
         return;
     };
 
-    let found: Vec<String> = regex
-        .strings(alphabet)
-        .max_len(max_len)
-        .collect();
-    let expected: Vec<String> = words(alphabet, max_len)
+    let found: Vec<String> = regex.strings(alphabet).max_len(max_len).collect();
+    let expected: Vec<String> = all_words_up_to(alphabet, max_len)
         .into_iter()
         .filter(|word| regex.is_match(word))
         .collect();
 
     assert_eq!(
-        found,
-        expected,
-        "pattern {:?}, alphabet {:?}, max_len {}",
-        pattern,
-        alphabet,
-        max_len,
+        found, expected,
+        "pattern {pattern:?}, alphabet {alphabet:?}, max_len {max_len}",
     );
 });
 
-fn words(alphabet: &str, max_len: usize) -> Vec<String> {
+fn all_words_up_to(alphabet: &str, max_len: usize) -> Vec<String> {
     let mut chars: Vec<char> = alphabet.chars().collect();
     chars.sort_unstable();
     chars.dedup();

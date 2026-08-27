@@ -4,14 +4,16 @@ pub struct Alphabet(Vec<char>);
 
 impl Alphabet {
     /// Builds an alphabet, sorting and deduplicating its characters.
-    pub fn new(chars: impl IntoIterator<Item = char>) -> Self {
-        let mut chars: Vec<char> = chars.into_iter().collect();
-        chars.sort_unstable();
-        chars.dedup();
-        Self(chars)
+    #[must_use]
+    pub fn new(characters: impl IntoIterator<Item = char>) -> Self {
+        let mut characters: Vec<char> = characters.into_iter().collect();
+        characters.sort_unstable();
+        characters.dedup();
+        Self(characters)
     }
 
     /// Returns the alphabet's characters in enumeration order.
+    #[must_use]
     pub fn as_slice(&self) -> &[char] {
         &self.0
     }
@@ -29,13 +31,13 @@ impl From<&str> for Alphabet {
 
 impl From<String> for Alphabet {
     fn from(value: String) -> Self {
-        Self::from(value.as_str())
+        Self::new(value.chars())
     }
 }
 
 impl From<&String> for Alphabet {
     fn from(value: &String) -> Self {
-        Self::from(value.as_str())
+        Self::new(value.chars())
     }
 }
 

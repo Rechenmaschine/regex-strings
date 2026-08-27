@@ -5,21 +5,22 @@ use crate::automaton::{Dfa, Nfa};
 
 /// An iterator over the strings a regex matches. See [`crate::RegexExt::strings`].
 ///
-/// It keeps one depth-first path and memoized lookahead.
+/// Items are yielded shortest-first, then lexicographically within each length.
+#[must_use = "iterators do nothing unless they are consumed"]
 pub struct Strings {
     dfa: Dfa,
     start: Option<u32>,
-    /// Current target length.
+    /// Length currently being searched.
     target: usize,
     max_len: Option<usize>,
-    /// Whether the current target length has been started.
+    /// Whether enumeration has started.
     started: bool,
-    /// Consecutive target lengths without a match.
+    /// Consecutive lengths without a match.
     barren: usize,
     /// DFA states along `word`, including its start state.
     path: Vec<Step>,
     word: String,
-    /// Memoized lookahead indexed by `[steps][state]`.
+    /// Memoized reachability indexed by `[steps][state]`.
     outlook: Vec<Vec<Option<Outlook>>>,
 }
 
@@ -42,11 +43,11 @@ enum Outlook {
 }
 
 impl Strings {
-    pub(crate) fn new(hir: &Hir, alphabet: Alphabet) -> Strings {
+    pub(crate) fn new(hir: &Hir, alphabet: Alphabet) -> Self {
         let chars = alphabet.into_vec();
         let mut dfa = Dfa::new(Nfa::build(hir, &chars), chars);
         let start = dfa.intern(vec![dfa.start_state()], None);
-        Strings {
+        Self {
             dfa,
             start,
             target: 0,
@@ -71,7 +72,8 @@ impl Strings {
     /// let found: Vec<String> = re.strings("ab").max_len(2).collect();
     /// assert_eq!(found, ["ab"]);
     /// ```
-    pub fn max_len(mut self, max_len: usize) -> Strings {
+    #[must_use = "the length bound must be used to affect enumeration"]
+    pub fn max_len(mut self, max_len: usize) -> Self {
         self.max_len = Some(max_len);
         self
     }
@@ -121,9 +123,10 @@ impl Strings {
     /// Returns whether a match is reachable in exactly `steps` transitions.
     fn probe(&mut self, state: u32, steps: usize) -> Outlook {
         if steps == 0 {
-            return match self.dfa.accepting(state) {
-                true => Outlook::Matches,
-                false => Outlook::Barren,
+            return if self.dfa.accepting(state) {
+                Outlook::Matches
+            } else {
+                Outlook::Barren
             };
         }
         if let Some(known) = self
@@ -158,7 +161,7 @@ impl Strings {
 impl Iterator for Strings {
     type Item = String;
 
-    fn next(&mut self) -> Option<String> {
+    fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.path.is_empty() && !self.begin_pass() {
                 return None;
