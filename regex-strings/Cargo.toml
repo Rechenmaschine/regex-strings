@@ -9,7 +9,7 @@ name = "regex-strings"
 readme = "README.md"
 repository = "https://github.com/Rechenmaschine/regex-strings"
 rust-version = "1.85"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 regex = "1.13.1"
