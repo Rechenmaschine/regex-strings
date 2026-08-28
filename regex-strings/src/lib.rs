@@ -34,9 +34,13 @@ pub trait RegexExt {
     /// Iterates the strings over `alphabet` that this regex matches, in
     /// nondecreasing length and lexicographic within each length.
     ///
-    /// Membership is [`Regex::is_match`]: `s` is yielded if and only if the
-    /// regex matches somewhere in `s` and `s` is built from `alphabet`. Anchor
-    /// the pattern to enumerate just the language of the pattern itself.
+    /// `s` is yielded when the pattern matches somewhere in `s` and `s` is
+    /// built from `alphabet`. Anchor the pattern to enumerate just the language
+    /// of the pattern itself.
+    ///
+    /// The pattern is reparsed with default settings. Inline flags are
+    /// preserved, but options set through `RegexBuilder` are not, so results
+    /// may differ from [`Regex::is_match`].
     ///
     /// The iterator is lazy, and infinite whenever the regex is unanchored, so
     /// bound it with [`Iterator::take`].
